@@ -1,3 +1,4 @@
+"use client";
 import React, { useContext, useEffect, useState } from 'react'
 import Header from './_components/Header';
 import { api } from '@/convex/_generated/api';
@@ -11,7 +12,7 @@ function Provider({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const CreateUser=useMutation(api.user.CreateNewUser);
+  const CreateUser=useMutation(api.user.createNewUser);
   const [userDetails,setUserdetails]=useState<any>();
   const {user}=useUser();
   useEffect(()=>{
@@ -21,9 +22,9 @@ function Provider({
   const CreateNewUser=async ()=>{
     if(user){
     const result=await CreateUser({
-      name:user?.fullName,
-      email:user?.emailAddresses[0]?.email,
-      imageUrl:user?.imageUrl
+      name:user?.fullName ?? "",
+      email:user?.emailAddresses[0]?.emailAddress ?? "",
+      imageUrl:user?.imageUrl ?? ""
     });
     setUserdetails(result);
   }
@@ -43,4 +44,6 @@ function Provider({
 export default Provider
 
 export const useUserDetails=()=>{
-  const context=useContext(UserDetailContext);}
+  const context=useContext(UserDetailContext);
+  return context;
+}

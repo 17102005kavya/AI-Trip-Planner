@@ -33,10 +33,13 @@ export async function POST(req:NextRequest){
     const {messages}=await req.json();
     const completion = await openai.chat.completions.create({
     model: "openai/gpt-4.1-mini",
+    response_format:{
+  type:'json_object'
+},
     messages: [
         {
             "role": "system",
-            content:`PROMPT`
+            content:PROMPT
         },
      ...messages
     ]
