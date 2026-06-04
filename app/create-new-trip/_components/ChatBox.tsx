@@ -14,6 +14,8 @@ import { v4 as uuidv4 } from "uuid";
 import { api } from "@/convex/_generated/api";
 import { useUserDetails } from "@/app/provider";
 
+import { useRouter } from "next/navigation";
+
 type Message = {
   role: string;
   content: string;
@@ -30,36 +32,43 @@ type tripInfo={
   iterinary:any,
 }
 
-function ChatBox() {
+interface ChatBoxProps {
+  onTripDetailsGenerated?: (tripId: string, details: any) => void;
+}
+
+function ChatBox({ onTripDetailsGenerated }: ChatBoxProps) {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState("");
   const [loading, setLoading] = useState(false);
- const [isFinal, setIsFinal] = useState(false);
- const [tripDetails, setTripDetails] = useState<tripInfo | null>(null);
- const SaveTripDetail=useMutation(api.tripDetail.CreateTripDetail);
- const [userDetais] = useUserDetails();
+  const [isFinal, setIsFinal] = useState(false);
+  const [tripDetails, setTripDetails] = useState<tripInfo | null>(null);
+  const [generatedTripId, setGeneratedTripId] = useState<string | null>(null);
+  const SaveTripDetail = useMutation(api.tripDetail.CreateTripDetail);
+  const { userDetails } = useUserDetails();
 
- const onSend = async () => {
-   // if (!userInput.trim() || loading) return;
+  const onSend = async (textToSend?: string, forceFinal?: boolean) => {
+    const text = textToSend !== undefined ? textToSend : userInput;
+    if (!text.trim() || loading) return;
 
     const newMsg: Message = {
       role: "user",
-      content: userInput,
+      content: text,
     };
 
     setMessages((prev) => [...prev, newMsg]);
     setUserInput("");
     setLoading(true);
 
+    const isFinalCall = forceFinal !== undefined ? forceFinal : isFinal;
+
     try {
       const result = await axios.post("/api/aimodel", {
         messages: [...messages, newMsg],
-        isFinal:isFinal,
+        isFinal: isFinalCall,
       });
 
-
-
-      !isFinal && setMessages((prev) => [
+      !isFinalCall && setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
@@ -67,23 +76,36 @@ function ChatBox() {
           ui: result.data.ui,
         },
       ]);
-      if(isFinal){
+      if(isFinalCall){
         setTripDetails(result.data);
         const tripId=uuidv4(); // Generate a unique trip ID
-        await SaveTripDetail({
-          tripDetail:result.data.trip_plan,
-          uid:userDetais?.id??'',
-          tripId:'',
-        })
+        setGeneratedTripId(tripId);
+        
+        const planToSave = result.data.trip_plan || result.data || {};
+        
+        if (userDetails?._id) {
+          await SaveTripDetail({
+            tripDetail: planToSave,
+            uid: userDetails._id,
+            tripId: tripId,
+          });
+        } else {
+          console.error("User not signed in or not found in UserTable");
+        }
+
+        if (onTripDetailsGenerated) {
+          onTripDetailsGenerated(tripId, result.data);
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
+      const errorMsg = error?.response?.data?.resp || "Something went wrong.";
 
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Something went wrong.",
+          content: errorMsg,
         },
       ]);
     } finally {
@@ -93,31 +115,29 @@ function ChatBox() {
 
   const RenderGenerativeui=(ui:string)=>{
     if(ui=='budget'){
-      return <BudgetUi onSelectedOption={(option:string)=>{setUserInput(option); onSend()}}/>
+      return <BudgetUi onSelectedOption={(option:string)=>{onSend(option)}}/>
 
     }
     else if(ui=='groupSize'){
-      return <GroupSize onSelectedOption={(option:string)=>{setUserInput(option); onSend()}}/>
+      return <GroupSize onSelectedOption={(option:string)=>{onSend(option)}}/>
     }
     else if(ui=='TripDuration'){
-      return <DaysUi onSelectedOption={(option:string)=>{setUserInput(option); onSend()}}/>
+      return <DaysUi onSelectedOption={(option:string)=>{onSend(option)}}/>
     }
     else if(ui=='final'){
-      return <FinalUi viewTrip={() => {}} disable={!tripDetails} />
+      return <FinalUi viewTrip={() => generatedTripId && router.push(`/view-trip/${generatedTripId}`)} disable={!generatedTripId} />
     }
     return null;
 
   }
   
-useEffect(() => {
-const lastMsg = messages [messages.length - 1]; if (lastMsg?.ui == 'final') {
-setIsFinal(true);
-setUserInput('Ok, Great!')
-}}, [messages]);
-
-useEffect (() => {
-if (isFinal && userInput) { onSend();
-}}, [isFinal]);
+  useEffect(() => {
+    const lastMsg = messages[messages.length - 1]; 
+    if (lastMsg?.ui == 'final') {
+      setIsFinal(true);
+      onSend('Ok, Great!', true);
+    }
+  }, [messages]);
 
   return (
     <div className="h-[87vh] flex flex-col">
@@ -127,7 +147,7 @@ if (isFinal && userInput) { onSend();
 
         {/* ONLY ADDITION */}
         {messages.length === 0 ? (
-          <EmptyState onSelectOption={(v:string)=>{setUserInput(v); onSend()}} />
+          <EmptyState onSelectOption={(v:string)=>{onSend(v)}} />
         ) : (
           <>
             {/* MESSAGES */}
@@ -177,7 +197,7 @@ if (isFinal && userInput) { onSend();
 
           <Button
             size="icon"
-            onClick={onSend}
+            onClick={() => onSend()}
             disabled={loading}
             className="absolute bottom-6 right-6"
           >

@@ -1,5 +1,6 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
 export const CreateTripDetail=mutation({
     args:{
         tripId:v.string(),
@@ -11,9 +12,21 @@ export const CreateTripDetail=mutation({
         const result=await ctx.db.insert("TripDetailTable",{
             tripId,
             tripDetail,
-            uod:uid,
+            uid:uid,
         })
+    return result;
     }
+  
+});
 
-}
-)
+export const GetTripDetail=query({
+  args:{
+    tripId:v.string()
+  },
+  handler:async(ctx,args)=>{
+    const result=await ctx.db.query("TripDetailTable")
+      .filter(q=>q.eq(q.field("tripId"),args.tripId))
+      .first();
+    return result;
+  }
+});
