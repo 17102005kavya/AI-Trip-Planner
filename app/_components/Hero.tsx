@@ -93,7 +93,7 @@ function Hero() {
           <HeroVideoDialog
             className="block dark:hidden"
             animationStyle="from-center"
-            videoSrc="https://youtu.be/exI_hD_4jAM?si=HJJIWt8z7xE6ezqo"
+            videoSrc="https://www.youtube.com/embed/exI_hD_4jAM"
             thumbnailSrc="https://www.holidaysplease.co.uk/assets/images/18-46-_YWRvYmVzdG9ja18xNDY1Njc4MzcuanBlZw%3D%3D-BasicCrop.jpg"
             thumbnailAlt="Travel inspiration video"
           />

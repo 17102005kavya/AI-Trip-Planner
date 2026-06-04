@@ -2,9 +2,11 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
 const isPublicRoute = createRouteMatcher([
   '/',
+  '/pricing',
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/api/aimodel(.*)' // AI model API route
+  '/api/aimodel(.*)', // AI model API route
+  '/api/webhook(.*)'   // Webhook endpoints
 ])
 
 export default clerkMiddleware(async (auth, req) => {
